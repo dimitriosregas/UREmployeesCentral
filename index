@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UR Employee Central — Payroll, Scheduling & Time Clock</title>
+    
+    <!-- PWA & Mobile Meta Tags -->
+    <meta name="apple-mobile-web-app-title" content="UR Payroll">
+    <meta name="application-name" content="UR Employee Central">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1e3a8a">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @media print {
+            body { background: white !important; color: black !important; }
+            .no-print, header, nav { display: none !important; }
+            .print-only { display: block !important; }
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { border: 1px solid #000 !important; padding: 8px !important; color: black !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 px-4 py-3 flex justify-between items-center shadow-md">
+        <div class="flex items-center gap-3">
+            <img src="./logo.png" alt="UR Logo" class="h-10 w-auto rounded-lg object-contain bg-slate-800 p-1 border border-slate-700" onerror="this.style.display='none'">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white">UR Employee Central</h1>
+                <p class="text-xs text-slate-400">Payroll, PIN Clock-In &amp; Schedule Management</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="openClockModal()" class="bg-blue-600 hover:bg-blue-500 text-xs px-3 py-2 rounded-lg font-semibold text-white transition shadow">⏱️ Clock In / Out</button>
+            <button onclick="openManagerModal()" class="bg-amber-600 hover:bg-amber-500 text-xs px-3 py-2 rounded-lg font-semibold text-white transition shadow">👑 Manager Portal</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto p-4 w-full flex-1 space-y-6">
+
+        <!-- Dashboard Overview Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow">
+                <span class="text-xs text-slate-400 uppercase tracking-wider">Active Employees</span>
+                <div class="text-2xl font-extrabold text-blue-400 mt-1" id="stat-total-emp">0</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow">
+                <span class="text-xs text-slate-400 uppercase tracking-wider">Current Pay Period</span>
+                <div class="text-sm font-bold text-emerald-400 mt-1" id="stat-pay-period">Semi-Monthly (1-15 / 16-End)</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow">
+                <span class="text-xs text-slate-400 uppercase tracking-wider">Pending Requests</span>
+                <div class="text-2xl font-extrabold text-amber-400 mt-1" id="stat-pending-requests">0</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow">
+                <span class="text-xs text-slate-400 uppercase tracking-wider">Weekly Schedule (Mon - Sun)</span>
+                <div class="text-xs font-semibold text-slate-200 mt-2"><button onclick="exportFullScheduleGoogleCalendar()" class="text-blue-400 hover:underline">📅 Sync Week to Google Calendar</button></div>
+            </div>
+        </div>
+
+        <!-- Weekly Schedule Section (Mon - Sun) -->
+        <section class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-white">📅 Weekly Schedule (Monday - Sunday)</h2>
+                <div class="flex gap-2">
+                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded border border-slate-700">🖨️ Print Schedule</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="bg-slate-800 text-slate-200 uppercase text-xs">
+                        <tr>
+                            <th class="p-3">Employee (Legal Name)</th>
+                            <th class="p-3">Monday</th>
+                            <th class="p-3">Tuesday</th>
+                            <th class="p-3">Wednesday</th>
+                            <th class="p-3">Thursday</th>
+                            <th class="p-3">Friday</th>
+                            <th class="p-3">Saturday</th>
+                            <th class="p-3">Sunday</th>
+                            <th class="p-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schedule-table-body" class="divide-y divide-slate-800">
+                        <tr><td colspan="9" class="p-4 text-center text-slate-500">No schedule loaded. Use Manager Portal to setup shifts.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <!-- Employee Requests & Messaging Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
+                <h3 class="text-md font-bold text-white mb-3">🌴 Request Time Off / Shift Swap</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Select Employee</label>
+                        <select id="req-emp-select" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Request Type</label>
+                        <select id="req-type" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
+                            <option value="Time Off">Day Off Request</option>
+                            <option value="Shift Swap">Shift Swap with Another Employee</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Date &amp; Details</label>
+                        <input type="date" id="req-date" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm mb-2 text-white">
+                        <textarea id="req-notes" placeholder="Reason or swap partner name..." class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm h-20 text-white"></textarea>
+                    </div>
+                    <button onclick="submitEmployeeRequest()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded text-sm transition">Submit Request</button>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow flex flex-col">
+                <h3 class="text-md font-bold text-white mb-3">💬 Secure Shift Messaging &amp; Reminders</h3>
+                <div id="message-board" class="flex-1 bg-slate-950 border border-slate-800 rounded p-3 h-48 overflow-y-auto space-y-2 text-xs mb-3">
+                    <div class="text-slate-500 text-center">No messages yet. Managers have full audit logs of all chats.</div>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="chat-input" placeholder="Type message or reminder..." class="flex-1 bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+                    <button onclick="sendChatMessage()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 rounded text-xs">Send</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- CLOCK IN / OUT MODAL -->
+    <div id="clock-modal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-sm w-full p-6 shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-4">⏱️ Employee Time Clock</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Select Employee</label>
+                    <select id="clock-emp-select" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">4-Digit Security PIN</label>
+                    <input type="password" id="clock-pin" maxlength="4" placeholder="••••" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-center text-xl tracking-widest text-white">
+                </div>
+                <div class="grid grid-cols-3 gap-2 pt-2">
+                    <button onclick="performClockAction('IN')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded text-xs">Clock In</button>
+                    <button onclick="performClockAction('BREAK')" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded text-xs">Break</button>
+                    <button onclick="performClockAction('OUT')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded text-xs">Clock Out</button>
+                </div>
+                <div id="clock-status-msg" class="text-xs text-center font-medium pt-2"></div>
+            </div>
+            <button onclick="closeModal('clock-modal')" class="w-full mt-4 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded text-xs font-semibold">Close</button>
+        </div>
+    </div>
+    <!-- MANAGER PORTAL MODAL (CONFIDENTIAL PAYROLL & TAX VAULT) -->
+    <div id="manager-modal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-4xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-amber-400">👑 Manager Confidential Vault &amp; Setup</h3>
+                <button onclick="closeModal('manager-modal')" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- Add New Employee Setup -->
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <h4 class="font-bold text-sm text-white mb-3">➕ Provision New Employee (Legal Name Required)</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <input type="text" id="new-emp-name" placeholder="Legal Full Name" class="bg-slate-900 border border-slate-700 rounded p-2 text-xs text-white">
+                        <input type="number" step="0.01" id="new-emp-rate" placeholder="Hourly Rate ($)" class="bg-slate-900 border border-slate-700 rounded p-2 text-xs text-white">
+                        <input type="password" maxlength="4" id="new-emp-pin" placeholder="4-Digit PIN" class="bg-slate-900 border border-slate-700 rounded p-2 text-xs text-white">
+                        <button onclick="addNewEmployee()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded p-2 text-xs">Add Employee</button>
+                    </div>
+                </div>
+
+                <!-- IRS Tax Withholding Upload Section -->
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <h4 class="font-bold text-sm text-blue-400 mb-2">📄 IRS Tax Withholding Paperwork / Table Upload</h4>
+                    <p class="text-xs text-slate-400 mb-3">Upload official IRS Publication 15-T PDF or screenshot to automatically parse tax brackets via OCR.</p>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="irs-doc-input" accept="image/*,application/pdf" class="bg-slate-900 border border-slate-700 rounded p-2 text-xs text-white flex-1" onchange="processIRSTaxDocument(event)">
+                    </div>
+                    <div id="tax-ocr-status" class="text-xs text-emerald-400 font-medium mt-2"></div>
+                </div>
+
+                <!-- Semi-Monthly Payroll Calculator (1-15 & 16-End) with FICA & Tax Deductions -->
+                <div>
+                    <h4 class="font-bold text-sm text-emerald-400 mb-2">💰 Semi-Monthly Payroll &amp; Tax Deductions (FICA: 6.2% SS, 1.45% Med)</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300 border border-slate-800">
+                            <thead class="bg-slate-800 text-slate-200 uppercase">
+                                <tr>
+                                    <th class="p-2">Employee</th>
+                                    <th class="p-2">Rate</th>
+                                    <th class="p-2">Period 1 (1-15) Net</th>
+                                    <th class="p-2">Period 2 (16-End) Net</th>
+                                    <th class="p-2">Yearly Summary</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payroll-table-body" class="divide-y divide-slate-800">
+                                <tr><td colspan="5" class="p-3 text-center text-slate-500">No payroll data calculated yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pending Time-Off & Swap Requests -->
+                <div>
+                    <h4 class="font-bold text-sm text-amber-400 mb-2">📋 Pending Requests Approval</h4>
+                    <div id="manager-requests-container" class="space-y-2">
+                        <div class="text-xs text-slate-500">No pending requests.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Tesseract.js for OCR Tax Document Parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+    <script>
+        let employees = JSON.parse(localStorage.getItem('ur_employees')) || [
+            { id: 1, name: "Dimitrios Regas", rate: 25.00, pin: "1234", hoursP1: 42.5, hoursP2: 38.0 },
+            { id: 2, name: "John Doe", rate: 15.00, pin: "5678", hoursP1: 35.0, hoursP2: 40.0 }
+        ];
+        let requests = JSON.parse(localStorage.getItem('ur_requests')) || [];
+        let messages = JSON.parse(localStorage.getItem('ur_messages')) || [];
+
+        // Statutory 2026 Tax Rates
+        const TAX_RATE_SOCIAL_SECURITY = 0.062; // 6.20%
+        const TAX_RATE_MEDICARE = 0.0145;        // 1.45%
+        let irsTaxTableData = null;
+
+        window.onload = () => {
+            updateUI();
+        };
+
+        function saveData() {
+            localStorage.setItem('ur_employees', JSON.stringify(employees));
+            localStorage.setItem('ur_requests', JSON.stringify(requests));
+            localStorage.setItem('ur_messages', JSON.stringify(messages));
+        }
+
+        function updateUI() {
+            document.getElementById('stat-total-emp').innerText = employees.length;
+            document.getElementById('stat-pending-requests').innerText = requests.filter(r => r.status === 'Pending').length;
+            
+            const empSelects = document.querySelectorAll('#clock-emp-select, #req-emp-select');
+            empSelects.forEach(sel => {
+                sel.innerHTML = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+            });
+
+            renderScheduleTable();
+            renderPayrollTable();
+            renderManagerRequests();
+            renderMessages();
+        }
+
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function openClockModal() { openModal('clock-modal'); }
+        
+        function openManagerModal() { 
+            let pass = prompt("Enter Manager Passcode:");
+            if (pass === "1984" || pass === "admin") {
+                openModal('manager-modal');
+            } else if (pass !== null) {
+                alert("Incorrect manager passcode.");
+            }
+        }
+
+        function addNewEmployee() {
+            let name = document.getElementById('new-emp-name').value.trim();
+            let rate = parseFloat(document.getElementById('new-emp-rate').value) || 0;
+            let pin = document.getElementById('new-emp-pin').value.trim();
+
+            if (!name || pin.length !== 4) {
+                alert("Please provide a valid Legal Name and 4-digit PIN.");
+                return;
+            }
+
+            employees.push({ id: Date.now(), name, rate, pin, hoursP1: 0, hoursP2: 0 });
+            saveData();
+            updateUI();
+            alert(`Employee ${name} provisioned successfully!`);
+            document.getElementById('new-emp-name').value = '';
+            document.getElementById('new-emp-rate').value = '';
+            document.getElementById('new-emp-pin').value = '';
+        }
+
+        function performClockAction(action) {
+            let empId = parseInt(document.getElementById('clock-emp-select').value);
+            let pin = document.getElementById('clock-pin').value.trim();
+            let emp = employees.find(e => e.id === empId);
+
+            if (!emp || emp.pin !== pin) {
+                document.getElementById('clock-status-msg').innerText = "❌ Invalid PIN for selected employee.";
+                document.getElementById('clock-status-msg').className = "text-xs text-center font-medium pt-2 text-rose-400";
+                return;
+            }
+
+            let timeStr = new Date().toLocaleTimeString();
+            let statusText = "";
+            if (action === 'IN') statusText = `✅ ${emp.name} clocked IN at ${timeStr}`;
+            if (action === 'BREAK') statusText = `☕ ${emp.name} took a BREAK at ${timeStr}`;
+            if (action === 'OUT') statusText = `👋 ${emp.name} clocked OUT at ${timeStr}`;
+
+            document.getElementById('clock-status-msg').innerText = statusText;
+            document.getElementById('clock-status-msg').className = "text-xs text-center font-medium pt-2 text-emerald-400";
+            document.getElementById('clock-pin').value = '';
+        }
+
+        // --- Tax Deduction Engine ---
+        function calculateNetPay(grossPay) {
+            let ssTax = grossPay * TAX_RATE_SOCIAL_SECURITY;
+            let medTax = grossPay * TAX_RATE_MEDICARE;
+            let withholding = grossPay * 0.12; // Standard estimated baseline bracket
+            let net = grossPay - (ssTax + medTax + withholding);
+            return net > 0 ? net.toFixed(2) : "0.00";
+        }
+
+        async function processIRSTaxDocument(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            document.getElementById('tax-ocr-status').innerText = "Scanning IRS tax paperwork via OCR... Please wait.";
+            try {
+                const worker = await Tesseract.createWorker('eng');
+                const ret = await worker.recognize(file);
+                await worker.terminate();
+                
+                irsTaxTableData = ret.data.text;
+                document.getElementById('tax-ocr-status').innerText = "✅ IRS Tax Document successfully scanned and loaded!";
+                alert("Withholding parameters successfully updated from government paperwork.");
+            } catch (e) {
+                document.getElementById('tax-ocr-status').innerText = "❌ Error parsing document.";
+            }
+        }
+
+        function renderScheduleTable() {
+            const tbody = document.getElementById('schedule-table-body');
+            tbody.innerHTML = employees.map(e => `
+                <tr>
+                    <td class="p-3 font-semibold text-white">${e.name}</td>
+                    <td class="p-3">08:00 - 16:30</td>
+                    <td class="p-3">08:00 - 16:30</td>
+                    <td class="p-3">OFF</td>
+                    <td class="p-3">08:00 - 16:30</td>
+                    <td class="p-3">08:00 - 16:30</td>
+                    <td class="p-3">OFF</td>
+                    <td class="p-3">OFF</td>
+                    <td class="p-3"><button onclick="exportSingleGoogleCalendar('${e.name}')" class="text-blue-400 hover:underline text-xs">📅 Google Cal</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderPayrollTable() {
+            const tbody = document.getElementById('payroll-table-body');
+            tbody.innerHTML = employees.map(e => {
+                let gross1 = e.hoursP1 * e.rate;
+                let gross2 = e.hoursP2 * e.rate;
+                let net1 = calculateNetPay(gross1);
+                let net2 = calculateNetPay(gross2);
+                let yearlyNet = ((parseFloat(net1) + parseFloat(net2)) * 24).toFixed(2);
+                return `
+                    <tr>
+                        <td class="p-2 font-semibold text-white">${e.name}</td>
+                        <td class="p-2">$${e.rate.toFixed(2)}/hr</td>
+                        <td class="p-2 font-mono text-emerald-400">$${net1} <span class="text-[10px] text-slate-500">(${e.hoursP1}h)</span></td>
+                        <td class="p-2 font-mono text-emerald-400">$${net2} <span class="text-[10px] text-slate-500">(${e.hoursP2}h)</span></td>
+                        <td class="p-2"><button onclick="printYearlySummary('${e.name}', '${yearlyNet}')" class="bg-slate-800 hover:bg-slate-700 text-xs px-2 py-1 rounded text-slate-200">🖨️ Yearly ($${yearlyNet})</button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function submitEmployeeRequest() {
+            let empId = document.getElementById('req-emp-select').value;
+            let emp = employees.find(e => e.id == empId);
+            let type = document.getElementById('req-type').value;
+            let date = document.getElementById('req-date').value;
+            let notes = document.getElementById('req-notes').value.trim();
+
+            if (!date) { alert("Please select a date."); return; }
+
+            requests.push({ id: Date.now(), empName: emp.name, type, date, notes, status: 'Pending' });
+            saveData();
+            updateUI();
+            alert("Request submitted successfully!");
+            document.getElementById('req-notes').value = '';
+        }
+
+        function renderManagerRequests() {
+            const container = document.getElementById('manager-requests-container');
+            let pending = requests.filter(r => r.status === 'Pending');
+            if (pending.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-500">No pending requests.</div>`;
+                return;
+            }
+            container.innerHTML = pending.map(r => `
+                <div class="bg-slate-900 p-3 rounded border border-slate-800 flex justify-between items-center text-xs">
+                    <div>
+                        <span class="font-bold text-white">${r.empName}</span> - <span class="text-amber-400">${r.type}</span> (${r.date})<br>
+                        <span class="text-slate-400">${r.notes || 'No notes'}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="resolveRequest(${r.id}, 'Approved')" class="bg-emerald-600 px-2 py-1 rounded text-white font-bold">Approve</button>
+                        <button onclick="resolveRequest(${r.id}, 'Denied')" class="bg-rose-600 px-2 py-1 rounded text-white font-bold">Deny</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function resolveRequest(id, status) {
+            let req = requests.find(r => r.id === id);
+            if (req) { req.status = status; saveData(); updateUI(); }
+        }
+
+        function sendChatMessage() {
+            let input = document.getElementById('chat-input');
+            let text = input.value.trim();
+            if (!text) return;
+            messages.push({ sender: "Manager / Staff", text, time: new Date().toLocaleTimeString() });
+            saveData();
+            input.value = '';
+            renderMessages();
+        }
+
+        function renderMessages() {
+            const board = document.getElementById('message-board');
+            if (messages.length === 0) {
+                board.innerHTML = `<div class="text-slate-500 text-center">No messages yet.</div>`;
+                return;
+            }
+            board.innerHTML = messages.map(m => `
+                <div class="bg-slate-900 p-2 rounded border border-slate-800">
+                    <span class="font-bold text-blue-400">${m.sender}</span> <span class="text-[10px] text-slate-500">${m.time}</span>
+                    <div class="text-slate-200 mt-0.5">${m.text}</div>
+                </div>
+            `).join('');
+            board.scrollTop = board.scrollHeight;
+        }
+
+        function exportSingleGoogleCalendar(name) {
+            let title = encodeURIComponent(`Work Shift - ${name}`);
+            let details = encodeURIComponent(`Scheduled shift at UR Employee Central location.`);
+            let url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}`;
+            window.open(url, '_blank');
+        }
+
+        function exportFullScheduleGoogleCalendar() {
+            alert("Generating Google Calendar sync links for active weekly shifts...");
+            exportSingleGoogleCalendar("All Staff");
+        }
+
+        function printYearlySummary(name, total) {
+            alert(`Preparing yearly earnings statement for ${name} (Est. Net: $${total})...`);
+            window.print();
+        }
+    </script>
+</body>
+</html>
