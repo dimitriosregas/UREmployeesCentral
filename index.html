@@ -11,7 +11,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1e3a8a">
-    
+    <link id="app-touch-icon" rel="apple-touch-icon" href="" />
+<link id="app-favicon" rel="icon" type="image/png" href="" />
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -461,3 +462,109 @@
     </script>
 </body>
 </html>
+<script>
+/* ==========================================================================
+   UR EMPLOYEES CENTRAL - HIGH-RES STAFF ICON GENERATOR
+   ========================================================================== */
+function generateUREmployeesIcon() {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // 1. Rich Deep Green & Navy Background
+    const bgGrad = ctx.createLinearGradient(0, 0, 512, 512);
+    bgGrad.addColorStop(0, '#0f172a');
+    bgGrad.addColorStop(1, '#064e3b');
+    ctx.fillStyle = bgGrad;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, 512, 512, 112);
+    ctx.fill();
+
+    // 2. Outer Gold Foil Bevel Border
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 14;
+    ctx.stroke();
+
+    // 3. Draw Clipboard Motif & Dollar Badge
+    ctx.save();
+    ctx.translate(256, 210);
+
+    // Clipboard Board (Gold/Bronze)
+    ctx.fillStyle = '#fde047';
+    ctx.beginPath();
+    ctx.roundRect(-90, -110, 180, 210, 16);
+    ctx.fill();
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+
+    // Clipboard Clip at top
+    ctx.fillStyle = '#ca8a04';
+    ctx.beginPath();
+    ctx.roundRect(-35, -130, 70, 35, 8);
+    ctx.fill();
+
+    // Checklist Lines on Clipboard
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    
+    // Checkbox 1
+    ctx.strokeRect(-65, -70, 20, 20);
+    ctx.beginPath(); ctx.moveTo(-30, -60); ctx.lineTo(-15, -45); ctx.lineTo(15, -75); ctx.stroke();
+    // Line 1
+    ctx.beginPath(); ctx.moveTo(35, -60); ctx.lineTo(65, -60); ctx.stroke();
+
+    // Checkbox 2
+    ctx.strokeRect(-65, -20, 20, 20);
+    ctx.beginPath(); ctx.moveTo(-30, -10); ctx.lineTo(-15, 5); ctx.lineTo(15, -25); ctx.stroke();
+    // Line 2
+    ctx.beginPath(); ctx.moveTo(35, -10); ctx.lineTo(65, -10); ctx.stroke();
+
+    // Dollar Coin Badge overlapping bottom right
+    ctx.save();
+    ctx.translate(70, 50);
+    ctx.fillStyle = '#eab308';
+    ctx.beginPath();
+    ctx.arc(0, 0, 42, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '900 48px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$', 0, 2);
+    ctx.restore();
+
+    ctx.restore();
+
+    // 4. Bold "STAFF" Text Label at the Bottom
+    ctx.fillStyle = '#fef08a';
+    ctx.font = '900 64px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 10;
+    ctx.fillText('STAFF', 256, 435);
+
+    // Convert canvas to permanent PNG Data URL & inject
+    const iconDataUrl = canvas.toDataURL('image/png');
+    document.querySelectorAll("link[rel*='icon']").forEach(link => {
+      link.type = 'image/png';
+      link.href = iconDataUrl;
+    });
+    const touchIcon = document.getElementById('app-touch-icon');
+    if (touchIcon) touchIcon.href = iconDataUrl;
+  } catch (e) {
+    console.error('Icon generator error:', e);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  generateUREmployeesIcon();
+});
+</script>
